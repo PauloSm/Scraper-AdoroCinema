@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import requests
+from unidecode import unidecode
 import sys
 
 options = Options()
@@ -30,44 +31,66 @@ class AdoroCinema(object):
         soup = BeautifulSoup(res.content, 'html.parser')
         
         infos = []
-        infos.append(str(soup.find('span', string='Ano de produção').next_sibling.next_sibling.string))
-        infos.append(str(soup.find('span', string='Tipo de filme').next_sibling.next_sibling.string))
-        infos.append(str(soup.find('span', string='Orçamento').nextSibling.nextSibling.string))
-        infos.append(str(soup.find('span', string='Idiomas').nextSibling.nextSibling.string))
-        infos.append(str(soup.find('span', class_='stareval-note').string))
+
+        if(soup.find('span', string='Ano de produção')):
+            infos.append(str(soup.find('span', string='Ano de produção').next_sibling.next_sibling.string))
+        if(soup.find('span', string='Tipo de filme')):
+            infos.append(str(soup.find('span', string='Tipo de filme').next_sibling.next_sibling.string))
+        if(soup.find('span', string='Orçamento')):
+            infos.append(str(soup.find('span', string='Orçamento').nextSibling.nextSibling.string))
+        if(soup.find('span', string='Idiomas')):
+            infos.append(str(soup.find('span', string='Idiomas').nextSibling.nextSibling.string))
+        if(soup.find('span', class_='stareval-note')):
+            infos.append(str(soup.find('span', class_='stareval-note').string))
 
         return infos
-    
-    def formater_name_to_query_string(self, name):
-        name = name.upper()
-        name = name.replace(' ', '+')
-
-        return name
         
     def query_url_link_creator(self, query):
         return self.LINK + query
     
     def searcher_movie_page(self):
         movie_url = None
-        name = self.formater_name_to_query_string(self.movie_name)
-        link = self.query_url_link_creator(name)
+        link = self.query_url_link_creator(self.movie_name)
 
         driver.get(link)
     
         tags = driver.find_elements_by_class_name('meta-title-link')
 
         for i in tags:
-            if(str(i.text).upper() == self.movie_name.upper()):
-                movie_url = str(i.get_attribute('href'))
+            tag_string = WordFormater(str(i.text))
+            if(tag_string.formater() == self.movie_name):
+                if(str(i.get_attribute('href'))[27:33] == 'filmes'):
+                    movie_url = str(i.get_attribute('href'))
 
         driver.quit()
         
         return movie_url
+
+class WordFormater(object):
+    def __init__(self, word):
+        self.word = word
+
+    def upper_word(self):
+        self.word = self.word.upper()
+        return self
+
+    def normalize(self):
+        self.word = unidecode(self.word)
+        return self
+
+    def query_format(self):
+        self.word = self.word.replace(' ', '+')
+        return self
+
+    def formater(self):
+        self.upper_word().normalize().query_format()
+        return self.word
         
 
 
 if __name__ == '__main__':
-    crawler = AdoroCinema(sys.argv[1])
+    name = WordFormater(sys.argv[1]) 
+    crawler = AdoroCinema(name.formater())
     movie_stats = crawler.movie_page_parser()
 
     if(type(movie_stats) is list):
