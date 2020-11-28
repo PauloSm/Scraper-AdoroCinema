@@ -5,6 +5,7 @@
 * Requests<br>
 * Selenium<br>
 * BeautifulSoup4
+* Unidecode
 
 # Execução do código
 python movieScraper.py nome do filme
